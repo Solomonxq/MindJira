@@ -1,20 +1,18 @@
 version: '3.8'
  
 networks:
-  coinwatch:
-    name: coinwatch
+  mindjira:
+    name: mindjira
     driver: bridge
  
 volumes:
   postgres-data:
   redis-data:
-  rabbitmq-data:
-  minio-data:
  
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: coinwatch-postgres
+    container_name: mindjira-postgres
     env_file:
       - ../.env
     environment:
@@ -27,7 +25,7 @@ services:
     ports:
       - "5432:5432"
     networks:
-      - coinwatch
+      - mindjira
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d postgres"]
       interval: 5s
@@ -36,66 +34,23 @@ services:
  
   redis:
     image: redis:7-alpine
-    container_name: coinwatch-redis
+    container_name: mindjira-redis
     command: redis-server --appendonly yes
     volumes:
       - redis-data:/data
     ports:
       - "6379:6379"
     networks:
-      - coinwatch
+      - mindjira
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
  
-  rabbitmq:
-    image: rabbitmq:3-management-alpine
-    container_name: coinwatch-rabbitmq
-    env_file:
-      - ../.env
-    environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
-    volumes:
-      - rabbitmq-data:/var/lib/rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    networks:
-      - coinwatch
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
- 
-  minio:
-    image: minio/minio:latest
-    container_name: coinwatch-minio
-    env_file:
-      - ../.env
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-    volumes:
-      - minio-data:/data
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    command: server /data --console-address ":9001"
-    networks:
-      - coinwatch
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
- 
   traefik:
     image: traefik:v2.11
-    container_name: coinwatch-traefik
+    container_name: mindjira-traefik
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
@@ -103,12 +58,12 @@ services:
       - "--entrypoints.web.address=:80"
       - "--accesslog=true"
     ports:
-      - "85:80"
+      - "80:80"
       - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - coinwatch
+      - mindjira
     healthcheck:
       test: ["CMD", "traefik", "healthcheck"]
       interval: 5s
@@ -119,10 +74,11 @@ services:
     build:
       context: ../services/auth
       dockerfile: Dockerfile
+    container_name: mindjira-auth
     env_file:
       - ../.env
     networks:
-      - coinwatch
+      - mindjira
     depends_on:
       postgres:
         condition: service_healthy
@@ -135,3 +91,91 @@ services:
       - "traefik.http.routers.auth.middlewares=auth-strip"
       - "traefik.http.middlewares.auth-strip.stripprefix.prefixes=/auth"
       - "traefik.http.services.auth.loadbalancer.server.port=8000"
+ 
+  gateway-service:
+    build:
+      context: ../services/gateway
+      dockerfile: Dockerfile
+    container_name: mindjira-gateway
+    env_file:
+      - ../.env
+    networks:
+      - mindjira
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gateway.rule=PathPrefix(`/gateway`)"
+      - "traefik.http.routers.gateway.entrypoints=web"
+      - "traefik.http.routers.gateway.middlewares=gateway-strip"
+      - "traefik.http.middlewares.gateway-strip.stripprefix.prefixes=/gateway"
+      - "traefik.http.services.gateway.loadbalancer.server.port=8000"
+ 
+  description-enricher-service:
+    build:
+      context: ../services/description-enricher
+      dockerfile: Dockerfile
+    container_name: mindjira-description-enricher
+    env_file:
+      - ../.env
+    networks:
+      - mindjira
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.description-enricher.rule=PathPrefix(`/description-enricher`)"
+      - "traefik.http.routers.description-enricher.entrypoints=web"
+      - "traefik.http.routers.description-enricher.middlewares=description-enricher-strip"
+      - "traefik.http.middlewares.description-enricher-strip.stripprefix.prefixes=/description-enricher"
+      - "traefik.http.services.description-enricher.loadbalancer.server.port=8000"
+ 
+  sprint-summary-service:
+    build:
+      context: ../services/sprint-summary
+      dockerfile: Dockerfile
+    container_name: mindjira-sprint-summary
+    env_file:
+      - ../.env
+    networks:
+      - mindjira
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sprint-summary.rule=PathPrefix(`/sprint-summary`)"
+      - "traefik.http.routers.sprint-summary.entrypoints=web"
+      - "traefik.http.routers.sprint-summary.middlewares=sprint-summary-strip"
+      - "traefik.http.middlewares.sprint-summary-strip.stripprefix.prefixes=/sprint-summary"
+      - "traefik.http.services.sprint-summary.loadbalancer.server.port=8000"
+ 
+  test-case-generator-service:
+    build:
+      context: ../services/test-case-generator
+      dockerfile: Dockerfile
+    container_name: mindjira-test-case-generator
+    env_file:
+      - ../.env
+    networks:
+      - mindjira
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.test-case-generator.rule=PathPrefix(`/test-case-generator`)"
+      - "traefik.http.routers.test-case-generator.entrypoints=web"
+      - "traefik.http.routers.test-case-generator.middlewares=test-case-generator-strip"
+      - "traefik.http.middlewares.test-case-generator-strip.stripprefix.prefixes=/test-case-generator"
+      - "traefik.http.services.test-case-generator.loadbalancer.server.port=8000"

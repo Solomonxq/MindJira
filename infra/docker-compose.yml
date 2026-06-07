@@ -1,14 +1,12 @@
-version: '3.8'
- 
 networks:
   mindjira:
     name: mindjira
     driver: bridge
- 
+
 volumes:
   postgres-data:
   redis-data:
- 
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -16,8 +14,6 @@ services:
     env_file:
       - ../.env
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: postgres
     volumes:
       - postgres-data:/var/lib/postgresql/data
@@ -31,7 +27,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
- 
+      start_period: 5s
+    restart: unless-stopped
+
   redis:
     image: redis:7-alpine
     container_name: mindjira-redis
@@ -47,7 +45,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
- 
+    restart: unless-stopped
+
   traefik:
     image: traefik:v2.11
     container_name: mindjira-traefik
@@ -57,6 +56,7 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--accesslog=true"
+      - "--ping=true"
     ports:
       - "80:80"
       - "8080:8080"
@@ -66,10 +66,12 @@ services:
       - mindjira
     healthcheck:
       test: ["CMD", "traefik", "healthcheck"]
-      interval: 5s
-      timeout: 3s
-      retries: 3
- 
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
   auth-service:
     build:
       context: ../services/auth
@@ -84,6 +86,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.auth.rule=PathPrefix(`/auth`)"
@@ -91,7 +100,7 @@ services:
       - "traefik.http.routers.auth.middlewares=auth-strip"
       - "traefik.http.middlewares.auth-strip.stripprefix.prefixes=/auth"
       - "traefik.http.services.auth.loadbalancer.server.port=8000"
- 
+
   gateway-service:
     build:
       context: ../services/gateway
@@ -106,6 +115,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.gateway.rule=PathPrefix(`/gateway`)"
@@ -113,7 +129,7 @@ services:
       - "traefik.http.routers.gateway.middlewares=gateway-strip"
       - "traefik.http.middlewares.gateway-strip.stripprefix.prefixes=/gateway"
       - "traefik.http.services.gateway.loadbalancer.server.port=8000"
- 
+
   description-enricher-service:
     build:
       context: ../services/description-enricher
@@ -128,6 +144,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.description-enricher.rule=PathPrefix(`/description-enricher`)"
@@ -135,7 +158,7 @@ services:
       - "traefik.http.routers.description-enricher.middlewares=description-enricher-strip"
       - "traefik.http.middlewares.description-enricher-strip.stripprefix.prefixes=/description-enricher"
       - "traefik.http.services.description-enricher.loadbalancer.server.port=8000"
- 
+
   sprint-summary-service:
     build:
       context: ../services/sprint-summary
@@ -150,6 +173,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.sprint-summary.rule=PathPrefix(`/sprint-summary`)"
@@ -157,7 +187,7 @@ services:
       - "traefik.http.routers.sprint-summary.middlewares=sprint-summary-strip"
       - "traefik.http.middlewares.sprint-summary-strip.stripprefix.prefixes=/sprint-summary"
       - "traefik.http.services.sprint-summary.loadbalancer.server.port=8000"
- 
+
   test-case-generator-service:
     build:
       context: ../services/test-case-generator
@@ -172,6 +202,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.test-case-generator.rule=PathPrefix(`/test-case-generator`)"

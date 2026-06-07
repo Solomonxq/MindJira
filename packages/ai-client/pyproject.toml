@@ -1,12 +1,9 @@
 [project]
-name = "mindjira"
+name = "ai-client"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = []
-
-[tool.uv.workspace]
-members = [
-    "packages/ai-client",
+dependencies = [
+    "redis>=8.0.0",
 ]

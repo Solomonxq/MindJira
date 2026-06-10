@@ -15,6 +15,7 @@ dependencies = [
     "structlog",
     "pytest",
     "pytest-asyncio",
+    "redis>=4.6.0",
 ]
 
 [tool.pytest.ini_options]

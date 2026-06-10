@@ -67,6 +67,13 @@ class JiraClient:
             raise JiraRateLimitError("Rate limit exceeded")
         if response.status_code >= 500:
             raise JiraServerError(f"Jira server error: {response.status_code}")
+        if response.status_code >= 400:
+            # log response body for easier debugging of client errors (e.g. 410)
+            try:
+                body = response.text
+            except Exception:
+                body = "<unreadable response body>"
+            logger.error("Jira API error", status_code=response.status_code, body=body)
         response.raise_for_status()
         return response.json()
  
@@ -82,8 +89,10 @@ class JiraClient:
             logger.debug("Jira search cache hit", jql=jql)
             return [Issue.from_jira(i) for i in cached]
  
+        # Use the newer search JQL endpoint per Atlassian change (CHANGE-2046)
+        # POST /rest/api/3/search/jql
         response = await self._http.post(
-            "/search",
+            "/search/jql",
             json={"jql": jql, "fields": fields, "maxResults": 100},
         )
         data = self._handle_response(response)

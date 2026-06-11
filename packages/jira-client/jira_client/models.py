@@ -1,8 +1,33 @@
 
 from datetime import datetime
-from pydantic import BaseModel
- 
- 
+from pydantic import BaseModel, field_validator
+
+
+def _adf_to_text(node) -> str:
+    """Convert a Jira ADF (Atlassian Document Format) node to plain text.
+
+    This function walks the ADF structure and concatenates all `text` nodes,
+    inserting newlines after paragraphs for readability.
+    """
+    if node is None:
+        return ""
+    if isinstance(node, str):
+        return node
+    if isinstance(node, list):
+        return "".join(_adf_to_text(n) for n in node)
+    if isinstance(node, dict):
+        # direct text node
+        if "text" in node:
+            return str(node["text"])
+        parts = []
+        for child in node.get("content", []) or []:
+            parts.append(_adf_to_text(child))
+            if isinstance(child, dict) and child.get("type") == "paragraph":
+                parts.append("\n")
+        return "".join(parts)
+    return ""
+
+
 class Issue(BaseModel):
     id: str
     key: str
@@ -16,6 +41,18 @@ class Issue(BaseModel):
     created: datetime
     updated: datetime
  
+    @field_validator("description", mode="before")
+    @classmethod
+    def _validate_description(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return v
+        if isinstance(v, (dict, list)):
+            text = _adf_to_text(v)
+            return text.strip() if text else None
+        return str(v)
+
     @classmethod
     def from_jira(cls, data: dict) -> "Issue":
         fields = data.get("fields", {})

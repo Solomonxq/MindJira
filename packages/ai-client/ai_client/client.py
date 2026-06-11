@@ -45,9 +45,12 @@ class AIClient:
             self._provider_type = "anthropic"
             self._client = anthropic.AsyncAnthropic(api_key=api_key)
 
-    @staticmethod
-    def _calculate_cost(input_tokens: int, output_tokens: int) -> float:
-        # Claude 3.5 Sonnet: $3 / 1M input, $15 / 1M output
+    def _calculate_cost(self, input_tokens: int, output_tokens: int) -> float:
+        # Claude 3.5 Sonnet: $3 / 1M input, $15 / 1M output.
+        # OpenAI-compatible providers (e.g. NVIDIA NIM) are estimated at half
+        # of the Anthropic rate as a conservative default.
+        if self._provider_type == "openai":
+            return (input_tokens * 1.5 / 1_000_000) + (output_tokens * 7.5 / 1_000_000)
         return (input_tokens * 3.0 / 1_000_000) + (output_tokens * 15.0 / 1_000_000)
 
     @retry(

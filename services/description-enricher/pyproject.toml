@@ -13,6 +13,7 @@ dependencies = [
     "alembic",
     "httpx",
     "structlog",
+    "redis>=5.0.0",
     "pytest",
     "pytest-asyncio",
 ]

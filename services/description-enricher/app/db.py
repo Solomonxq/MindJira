@@ -6,5 +6,5 @@ engine = create_async_engine(settings.DB_URL, echo=settings.DEBUG)
 async_session_factory = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
-    expire_on_commit=False
+    expire_on_commit=False,
 )

@@ -6,9 +6,11 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "anthropic",
+    "asyncpg",
     "openai",
     "pydantic",
     "pydantic-settings",
+    "python-dotenv",
     "sqlalchemy",
     "tenacity",
 ]

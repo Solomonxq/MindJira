@@ -8,8 +8,8 @@ from app.db import Base
 
 
 class UserRole(str, enum.Enum):
-    USER = 'user'
-    ADMIN = 'admin'
+    USER = "USER"
+    ADMIN = "ADMIN"
 
 
 class SubscriptionPlan(str, enum.Enum):

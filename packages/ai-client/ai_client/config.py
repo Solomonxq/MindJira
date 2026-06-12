@@ -1,5 +1,3 @@
-from typing import Optional
-
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,4 +13,4 @@ class AIClientSettings(BaseSettings):
     ANTHROPIC_MODEL: str = "claude-3-5-sonnet-20241022"
     MAX_TOKENS: int = 4096
     TEMPERATURE: float = 0.1
-    BASE_URL: Optional[str] = None
+    BASE_URL: str | None = None

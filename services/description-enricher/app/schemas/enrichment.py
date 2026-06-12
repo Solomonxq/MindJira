@@ -1,6 +1,6 @@
-import uuid
 from datetime import datetime
-from pydantic import BaseModel, Field
+from uuid import UUID
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class EnrichRequest(BaseModel):
@@ -10,7 +10,7 @@ class EnrichRequest(BaseModel):
 
 
 class EnrichResponse(BaseModel):
-    id: uuid.UUID
+    id: UUID
     issue_key: str
     issue_type: str | None
     language: str
@@ -19,4 +19,4 @@ class EnrichResponse(BaseModel):
     error: str | None
     created_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)

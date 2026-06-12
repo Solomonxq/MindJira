@@ -1,14 +1,15 @@
 import asyncio
 import json
 import re
-from typing import Optional
 
 import structlog
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from ai_client.client import AIClient
+from ai_client.exceptions import AIClientError
 from jira_client.client import JiraClient
+from jira_client.exceptions import JiraClientError
 from jira_client.models import Issue
 
 from app.config import settings
@@ -54,7 +55,7 @@ def _build_system_prompt(language: str) -> str:
 
 def _build_user_prompt(
     issue: Issue,
-    epic: Optional[Issue],
+    epic: Issue | None,
     related: list[Issue],
     language: str,
 ) -> str:
@@ -75,7 +76,7 @@ def _build_user_prompt(
 
 async def _fetch_context(
     jira: JiraClient, issue: Issue
-) -> tuple[Optional[Issue], list[Issue]]:
+) -> tuple[Issue | None, list[Issue]]:
     epic = None
     related = []
     if not issue.epic_key:
@@ -83,13 +84,13 @@ async def _fetch_context(
 
     try:
         epic = await jira.get_issue(issue.epic_key)
-    except Exception as exc:
+    except JiraClientError as exc:
         logger.warning("Failed to fetch epic", epic_key=issue.epic_key, error=str(exc))
 
     try:
         related = await jira.get_epic_issues(issue.epic_key)
         related = [r for r in related if r.key != issue.key]
-    except Exception as exc:
+    except JiraClientError as exc:
         logger.warning(
             "Failed to fetch epic issues", epic_key=issue.epic_key, error=str(exc)
         )
@@ -125,8 +126,8 @@ async def enrich_issue(
     ai: AIClient,
     session: AsyncSession,
     issue_key: str,
-    language: Optional[str] = None,
-    apply_to_jira: Optional[bool] = None,
+    language: str | None = None,
+    apply_to_jira: bool | None = None,
 ) -> Enrichment:
     apply_to_jira = settings.AUTO_APPLY_TO_JIRA if apply_to_jira is None else apply_to_jira
 
@@ -162,7 +163,7 @@ async def enrich_issue(
         try:
             await apply_description(jira, issue.key, generated)
             enrichment.applied_to_jira = True
-        except Exception as exc:
+        except JiraClientError as exc:
             logger.error(
                 "Failed to apply description to Jira",
                 issue_key=issue_key,
@@ -195,7 +196,7 @@ async def process_job_payload(
         try:
             enrichment = await enrich_issue(jira, ai, session, key)
             results.append(enrichment)
-        except Exception as exc:
+        except (AIClientError, JiraClientError) as exc:
             logger.error("Failed to enrich issue", issue_key=key, error=str(exc))
     return results
 

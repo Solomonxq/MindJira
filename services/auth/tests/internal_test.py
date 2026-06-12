@@ -1,6 +1,7 @@
-import pytest
-import uuid
 import json
+from uuid import uuid4
+
+import pytest
 from httpx import AsyncClient, ASGITransport
 from app.main import app
 from app.config import settings
@@ -13,12 +14,12 @@ async def client():
 
 @pytest.mark.asyncio
 async def test_internal_unauthorized(client):
-    response = await client.get(f"/internal/users/{uuid.uuid4()}/quota")
+    response = await client.get(f"/internal/users/{uuid4()}/quota")
     assert response.status_code in [401, 422]
 
 @pytest.mark.asyncio
 async def test_quota_cache_miss_and_hit(client):
-    test_email = f"quota_{uuid.uuid4().hex[:8]}@example.com"
+    test_email = f"quota_{uuid4().hex[:8]}@example.com"
     await client.post("/auth/register", json={"email": test_email, "password": "securepassword123"})
     login = await client.post("/auth/login", json={"email": test_email, "password": "securepassword123"})
     
@@ -48,7 +49,7 @@ async def test_quota_cache_miss_and_hit(client):
 
 @pytest.mark.asyncio
 async def test_verify_token_internal(client):
-    test_email = f"verify_{uuid.uuid4().hex[:8]}@example.com"
+    test_email = f"verify_{uuid4().hex[:8]}@example.com"
     await client.post("/auth/register", json={"email": test_email, "password": "securepassword123"})
     login = await client.post("/auth/login", json={"email": test_email, "password": "securepassword123"})
     token = login.json()["access_token"]

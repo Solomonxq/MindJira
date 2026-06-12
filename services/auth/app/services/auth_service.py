@@ -1,13 +1,14 @@
-import uuid
 import structlog
 from datetime import datetime, timedelta, timezone
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
+from uuid import UUID, uuid4
+
 from fastapi import HTTPException, status
-from uuid import UUID
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.models import User, RefreshToken
 from app.services.security import verify_password, get_password_hash, create_access_token
+from app.models.models import UserRole
 from app.schemas.user import UserUpdate, ChangePassword, AdminUserUpdate
 
 logger = structlog.get_logger()
@@ -23,7 +24,7 @@ async def register_user(db: AsyncSession, user_data):
         email=user_data.email,
         password_hash=hashed_password,
         full_name=user_data.full_name,
-        role="USER",
+        role=UserRole.USER,
         is_active=True
     )
     db.add(new_user)
@@ -45,7 +46,7 @@ async def login_user(db: AsyncSession, email: str, password: str):
     logger.info("Successful login", email=email)
 
     access_token = create_access_token(data={"sub": str(user.id), "role": user.role, "plan": "free"})
-    refresh_token_value = uuid.uuid4().hex
+    refresh_token_value = uuid4().hex
     expires = datetime.now(timezone.utc) + timedelta(days=30)
     
     db_token = RefreshToken(
@@ -89,7 +90,7 @@ async def refresh_tokens(db: AsyncSession, refresh_token: str):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
     access_token = create_access_token(data={"sub": str(user.id), "role": user.role, "plan": "free"})
-    new_refresh_token_value = uuid.uuid4().hex
+    new_refresh_token_value = uuid4().hex
     expires = datetime.now(timezone.utc) + timedelta(days=30)
 
     new_db_token = RefreshToken(
@@ -149,9 +150,9 @@ async def get_all_users(db: AsyncSession, skip: int, limit: int, search: str | N
 async def get_user_by_id(db: AsyncSession, user_id: str):
     try:
         query = select(User).where(User.id == UUID(user_id))
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid UUID format")
-        
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid UUID format") from exc
+
     result = await db.execute(query)
     user = result.scalar_one_or_none()
     if not user:

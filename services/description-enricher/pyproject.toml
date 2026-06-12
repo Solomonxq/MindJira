@@ -16,7 +16,13 @@ dependencies = [
     "redis>=5.0.0",
     "pytest",
     "pytest-asyncio",
+    "ai-client",
+    "jira-client",
 ]
+
+[tool.uv.sources]
+ai-client = { path = "../../packages/ai-client" }
+jira-client = { path = "../../packages/jira-client" }
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

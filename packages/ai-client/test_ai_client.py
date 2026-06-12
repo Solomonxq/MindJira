@@ -2,25 +2,30 @@ import asyncio
 import os
 from dotenv import load_dotenv
 
+import structlog
+
+from ai_client import AIClient
+from ai_client.config import AIClientSettings
+
+logger = structlog.get_logger()
+
 # Load .env from project root
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
 
-from ai_client import AIClient
-
 
 async def main():
-    api_key = os.getenv("AI_ANTHROPIC_API_KEY")
-    model = os.getenv("AI_ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
-    base_url = os.getenv("AI_BASE_URL")
+    config = AIClientSettings()
+    api_key = os.getenv("AI_ANTHROPIC_API_KEY") or config.ANTHROPIC_API_KEY
+    model = os.getenv("AI_ANTHROPIC_MODEL") or config.ANTHROPIC_MODEL
+    base_url = os.getenv("AI_BASE_URL") or config.BASE_URL
 
     if not api_key:
-        print("ERROR: AI_ANTHROPIC_API_KEY not found in environment")
+        logger.error("AI_ANTHROPIC_API_KEY not found in environment")
         return
 
     client = AIClient(api_key=api_key, model=model, base_url=base_url)
     provider = "NVIDIA NIM (OpenAI-compatible)" if base_url else "Anthropic"
-    print(f"Testing with provider: {provider}")
-    print(f"Model: {model}")
+    logger.info("Starting AIClient test", provider=provider, model=model)
 
     try:
         response = await client.complete(
@@ -28,14 +33,16 @@ async def main():
             user_prompt='Say exactly "Hello from MindJira AI" and nothing else.',
             max_tokens=50,
         )
-        print("\nAIClient test passed")
-        print(f"   Content: {response.content.strip()}")
-        print(f"   Model: {response.model}")
-        print(f"   Input tokens: {response.input_tokens}")
-        print(f"   Output tokens: {response.output_tokens}")
-        print(f"   Cost USD: ${response.cost_usd:.6f}")
-    except Exception as e:
-        print(f"\nAIClient test failed: {type(e).__name__}: {e}")
+        logger.info(
+            "AIClient test passed",
+            content=response.content.strip(),
+            model=response.model,
+            input_tokens=response.input_tokens,
+            output_tokens=response.output_tokens,
+            cost_usd=response.cost_usd,
+        )
+    except Exception:
+        logger.exception("AIClient test failed")
 
 
 if __name__ == "__main__":

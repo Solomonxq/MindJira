@@ -1,11 +1,11 @@
-from pydantic import BaseModel
-from typing import List
 from datetime import datetime
+
+from pydantic import BaseModel
 
 class Limits(BaseModel):
     max_watches: int
     check_interval_seconds: int
-    allowed_channels: List[str]
+    allowed_channels: list[str]
 
 class QuotaResponse(BaseModel):
     user_id: str

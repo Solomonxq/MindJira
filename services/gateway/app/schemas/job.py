@@ -1,12 +1,12 @@
-import uuid
 from datetime import datetime
-from pydantic import BaseModel
+from uuid import UUID
+from pydantic import BaseModel, ConfigDict, Field
  
  
 class JobRunRequest(BaseModel):
     service_name: str
     jql: str | None = None
-    issue_keys: list[str] = []
+    issue_keys: list[str] = Field(default_factory=list)
  
  
 class JiraWebhookPayload(BaseModel):
@@ -15,7 +15,7 @@ class JiraWebhookPayload(BaseModel):
  
  
 class JobResponse(BaseModel):
-    id: uuid.UUID
+    id: UUID
     service_name: str
     trigger_type: str
     jql: str | None
@@ -26,5 +26,5 @@ class JobResponse(BaseModel):
     error: str | None
     created_at: datetime
  
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
  

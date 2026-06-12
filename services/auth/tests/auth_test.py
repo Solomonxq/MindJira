@@ -1,5 +1,6 @@
+from uuid import uuid4
+
 import pytest
-import uuid
 from httpx import AsyncClient, ASGITransport
 from app.main import app
 from sqlalchemy import text
@@ -21,7 +22,7 @@ async def make_user_admin(email: str):
         await db.commit()
 @pytest.mark.asyncio
 async def test_get_me_happy_path(client):
-    test_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
+    test_email = f"test_{uuid4().hex[:8]}@example.com"
     await client.post("/auth/register", json={"email": test_email, "password": "securepassword123", "full_name": "Test User"})
     login = await client.post("/auth/login", json={"email": test_email, "password": "securepassword123"})
     token = login.json()["access_token"]
@@ -34,7 +35,7 @@ async def test_get_me_happy_path(client):
 
 @pytest.mark.asyncio
 async def test_soft_delete_and_login_prevention(client):
-    test_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
+    test_email = f"test_{uuid4().hex[:8]}@example.com"
     await client.post("/auth/register", json={"email": test_email, "password": "securepassword123"})
     login = await client.post("/auth/login", json={"email": test_email, "password": "securepassword123"})
     token = login.json()["access_token"]
@@ -47,7 +48,7 @@ async def test_soft_delete_and_login_prevention(client):
 
 @pytest.mark.asyncio
 async def test_admin_rbac_protection(client):
-    test_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
+    test_email = f"test_{uuid4().hex[:8]}@example.com"
     await client.post("/auth/register", json={"email": test_email, "password": "securepassword123"})
     login = await client.post("/auth/login", json={"email": test_email, "password": "securepassword123"})
     token = login.json()["access_token"]
@@ -57,7 +58,7 @@ async def test_admin_rbac_protection(client):
 
 @pytest.mark.asyncio
 async def test_admin_endpoints_happy_path(client):
-    test_email = f"admin_{uuid.uuid4().hex[:8]}@example.com"
+    test_email = f"admin_{uuid4().hex[:8]}@example.com"
     await client.post("/auth/register", json={"email": test_email, "password": "securepassword123"})
     await make_user_admin(test_email)
     

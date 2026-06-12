@@ -1,17 +1,22 @@
-import uuid
-import structlog
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from redis.asyncio import Redis
+from uuid import UUID
 
-from app.deps import get_session, get_redis
-from app.schemas.job import JobRunRequest, JobResponse, JiraWebhookPayload
-from app.gateway_service import JobService
 import httpx
-from fastapi import Response, Security
+import structlog
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Response,
+    Security,
+)
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi import Depends
-import os
+from redis.asyncio import Redis
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import settings
+from app.deps import get_redis, get_session
+from app.gateway_service import JobService
+from app.schemas.job import JobRunRequest, JobResponse, JiraWebhookPayload
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -36,7 +41,7 @@ async def run_job(
 
 @router.get("/jobs/{job_id}/status", response_model=JobResponse, tags=["Jobs"])
 async def get_job_status(
-    job_id: uuid.UUID,
+    job_id: UUID,
     session: AsyncSession = Depends(get_session),
     redis: Redis = Depends(get_redis),
 ):
@@ -95,11 +100,13 @@ security = HTTPBearer()
 async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> None:
     # forward token to auth service /auth/me to validate
     # allow internal service token for service-to-service auth
-    internal = os.getenv("AUTH_INTERNAL_SERVICE_TOKEN")
-    if internal and credentials.credentials == internal:
+    if (
+        settings.INTERNAL_SERVICE_TOKEN
+        and credentials.credentials == settings.INTERNAL_SERVICE_TOKEN
+    ):
         return
     headers = {"Authorization": f"Bearer {credentials.credentials}"}
-    url = "http://traefik/auth/me"
+    url = f"{settings.AUTH_SERVICE_URL}/me"
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
             resp = await client.get(url, headers=headers)
@@ -116,7 +123,7 @@ async def proxy_sprint_report(sprint_id: int, token: HTTPAuthorizationCredential
     await verify_token(token)
 
     # forward request to sprint-summary through Traefik
-    url = f"http://traefik/sprint-summary/report/sprint/{sprint_id}"
+    url = f"{settings.SPRINT_SUMMARY_SERVICE_URL}/report/sprint/{sprint_id}"
     headers = {"Authorization": f"Bearer {token.credentials}"}
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:

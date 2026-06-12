@@ -4,10 +4,11 @@ import asyncio
 import json
 import re
 from datetime import datetime, timezone
-from typing import Literal, Optional
+from typing import Literal
 
 import anthropic
 import openai
+from sqlalchemy.ext.asyncio import AsyncSession
 from tenacity import (
     retry,
     retry_if_exception,
@@ -33,7 +34,7 @@ class AIClient:
         api_key: str,
         model: str,
         max_concurrent: int = 5,
-        base_url: Optional[str] = None,
+        base_url: str | None = None,
     ) -> None:
         self._model = model
         self._semaphore = asyncio.Semaphore(max_concurrent)
@@ -63,11 +64,11 @@ class AIClient:
         self,
         system_prompt: str,
         user_prompt: str,
-        max_tokens: Optional[int] = None,
+        max_tokens: int | None = None,
         *,
-        session: Optional[object] = None,
-        service_name: Optional[str] = None,
-        issue_key: Optional[str] = None,
+        session: AsyncSession | None = None,
+        service_name: str | None = None,
+        issue_key: str | None = None,
     ) -> AIResponse:
         max_tokens = max_tokens or 4096
 
@@ -128,11 +129,11 @@ class AIClient:
         system_prompt: str,
         user_prompt: str,
         schema: dict,
-        max_tokens: Optional[int] = None,
+        max_tokens: int | None = None,
         *,
-        session: Optional[object] = None,
-        service_name: Optional[str] = None,
-        issue_key: Optional[str] = None,
+        session: AsyncSession | None = None,
+        service_name: str | None = None,
+        issue_key: str | None = None,
     ) -> dict:
         schema_text = json.dumps(schema, indent=2)
         enhanced_prompt = (
@@ -162,9 +163,9 @@ class AIClient:
 
     async def log_usage(
         self,
-        session: object,
-        service_name: Optional[str],
-        issue_key: Optional[str],
+        session: AsyncSession,
+        service_name: str | None,
+        issue_key: str | None,
         response: AIResponse,
     ) -> None:
         log_entry = AILog(

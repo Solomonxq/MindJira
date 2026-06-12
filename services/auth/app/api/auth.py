@@ -3,7 +3,6 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from typing import List
 
 from app.schemas.auth import UserRegister, UserLogin, RefreshRequest, TokenResponse
 from app.schemas.user import UserResponse, UserUpdate, ChangePassword, AdminUserUpdate
@@ -60,7 +59,7 @@ async def delete_user_me(current_user: User = Depends(get_current_user), db: Asy
     await soft_delete_user(db, current_user)
     return {"message": "User deleted"}
 
-@router.get("/users", response_model=List[UserResponse])
+@router.get("/users", response_model=list[UserResponse])
 async def read_users(skip: int = 0, limit: int = 10, search: str | None = None, admin_user: User = Depends(get_admin_user), db: AsyncSession = Depends(get_db)):
     return await get_all_users(db, skip, limit, search)
 

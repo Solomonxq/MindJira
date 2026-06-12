@@ -1,10 +1,10 @@
 import json
-from typing import Optional
 
 import httpx
 
-from jira_client.client import JiraClient
 from ai_client.client import AIClient
+from jira_client.client import JiraClient
+
 from app.config import settings
 
 
@@ -61,7 +61,7 @@ async def run_health_check(jira: JiraClient, ai: AIClient, days: int = 14) -> st
 	return ai_resp.content
 
 
-async def send_to_slack(text: str, webhook: Optional[str] = None) -> None:
+async def send_to_slack(text: str, webhook: str | None = None) -> None:
 	webhook = webhook or settings.SLACK_WEBHOOK
 	if not webhook:
 		return
@@ -69,7 +69,7 @@ async def send_to_slack(text: str, webhook: Optional[str] = None) -> None:
 		await client.post(webhook, json={"text": text})
 
 
-async def save_to_confluence(title: str, markdown: str) -> Optional[str]:
+async def save_to_confluence(title: str, markdown: str) -> str | None:
 	if not settings.CONFLUENCE_API_URL or not settings.CONFLUENCE_USER or not settings.CONFLUENCE_TOKEN:
 		return None
 	url = settings.CONFLUENCE_API_URL.rstrip("/") + "/rest/api/content"

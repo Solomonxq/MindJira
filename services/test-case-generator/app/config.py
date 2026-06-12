@@ -10,6 +10,13 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     DB_URL: str
     REDIS_URL: str
+    JIRA_API_TOKEN: str
+    JIRA_BASE_URL: str
+    JIRA_EMAIL: str
+    AI_API_KEY: str
+    AI_MODEL: str
+    AI_BASE_URL: str | None = None
+    TEST_CASE_LANGUAGE: str = "uk"
 
     model_config = SettingsConfigDict(
         env_file=".env",

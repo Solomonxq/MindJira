@@ -1,14 +1,15 @@
-FROM python:3.12-slim AS builder
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
-WORKDIR /app
-COPY pyproject.toml ./
-RUN uv venv /app/.venv && \
-    uv pip install --python /app/.venv/bin/python -e .
+FROM python:3.12-slim
 
-FROM python:3.12-slim AS runtime
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
 WORKDIR /app
-COPY --from=builder /app/.venv /app/.venv
-ENV PATH="/app/.venv/bin:$PATH"
+
 COPY . /app
+
+RUN uv venv --python 3.12 /app/.venv && \
+    uv pip install --python /app/.venv/bin/python -e services/gateway
+
+ENV PATH="/app/.venv/bin:$PATH"
+
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "alembic -c services/gateway/alembic.ini upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

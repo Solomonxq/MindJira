@@ -7,8 +7,9 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "sprint-summary" 
     ENV: str = "development"
     DEBUG: bool = True
+    DB_URL: str
     REDIS_URL: str
-    JIRA_API_TOKEN:str
+    JIRA_API_TOKEN: str
     JIRA_BASE_URL: str
     JIRA_EMAIL: str
     AI_API_KEY: str | None = None

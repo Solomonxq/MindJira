@@ -1,3 +1,4 @@
+CREATE DATABASE stos;
 CREATE DATABASE auth_db;
 CREATE DATABASE description_enricher_db;
 CREATE DATABASE sprint_summary_db;

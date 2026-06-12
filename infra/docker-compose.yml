@@ -104,8 +104,8 @@ services:
 
   gateway-service:
     build:
-      context: ../services/gateway
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/gateway/Dockerfile
     container_name: mindjira-gateway
     env_file:
       - ../.env
@@ -191,8 +191,8 @@ services:
 
   test-case-generator-service:
     build:
-      context: ../services/test-case-generator
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/test-case-generator/Dockerfile
     container_name: mindjira-test-case-generator
     env_file:
       - ../.env
@@ -217,3 +217,19 @@ services:
       - "traefik.http.routers.test-case-generator.middlewares=test-case-generator-strip"
       - "traefik.http.middlewares.test-case-generator-strip.stripprefix.prefixes=/test-case-generator"
       - "traefik.http.services.test-case-generator.loadbalancer.server.port=8000"
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: mindjira-frontend
+    networks:
+      - mindjira
+    depends_on:
+      - traefik
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
